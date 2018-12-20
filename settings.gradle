@@ -1,0 +1,1 @@
+include ':app',':utilities-android', ':jsonrpc-ws-android', ':kurento-room-client', ':webrtcpeer-android', ':kurento-android'
