@@ -12,6 +12,9 @@ package org.webrtcpeer.util;
 
 import android.os.Build;
 import android.util.Log;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.webrtc.IceCandidate;
 
 /**
  * AppRTCUtils provides helper functions for managing thread safety.
@@ -50,5 +53,25 @@ public final class AppRTCUtils {
                 + "Manufacturer: " + Build.MANUFACTURER + ", "
                 + "Model: " + Build.MODEL + ", "
                 + "Product: " + Build.PRODUCT);
+    }
+
+    public static String jsonToValue(org.json.JSONObject object, String key)
+            throws JSONException {
+        if (object == null || key == null) {
+            //Log.e(TAG, "object or key is null");
+            throw new NullPointerException("object or key is null");
+        }
+        return (String) object.get(key);
+    }
+
+
+
+    public static void jsonPut(JSONObject json,
+                               String key, Object value) {
+        try {
+            json.put(key, value);
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

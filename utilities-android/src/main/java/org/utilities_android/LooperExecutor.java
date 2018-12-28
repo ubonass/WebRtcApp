@@ -81,7 +81,8 @@ public class LooperExecutor extends Thread implements Executor {
     @Override
     public synchronized void execute(final Runnable runnable) {
         if (!running) {
-            Log.w(TAG, "Running looper executor without calling requestStart()");
+            Log.w(TAG,
+                    "Running looper executor without calling requestStart()");
             return;
         }
         if (Thread.currentThread().getId() == threadId) {
@@ -89,5 +90,15 @@ public class LooperExecutor extends Thread implements Executor {
         } else {
             handler.post(runnable);
         }
+    }
+
+    public synchronized void executeDelay(final Runnable runnable,int delay) {
+        if (!running) {
+            Log.w(TAG,
+                    "Running looper executor without calling requestStart()");
+            return;
+        }
+
+        handler.postDelayed(runnable,delay);
     }
 }

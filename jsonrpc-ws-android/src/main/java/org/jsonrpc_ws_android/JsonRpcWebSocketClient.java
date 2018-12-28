@@ -40,7 +40,7 @@ public class JsonRpcWebSocketClient {
     @Nullable
     private WebSocketConnectionEvents events;
     @Nullable
-    private ExtendedWebSocketClient client;
+    private WebSocketChannelClient client;
     @Nullable
     private LooperExecutor executor;
 
@@ -71,7 +71,7 @@ public class JsonRpcWebSocketClient {
         this.connectionState = WebSocketConnectionState.CLOSED;
         this.events = events;
         this.executor = executor;
-        this.client = new ExtendedWebSocketClient(serverUri, events);
+        this.client = new WebSocketChannelClient(serverUri, events);
     }
 
     public void connect() throws IOException {
@@ -136,7 +136,7 @@ public class JsonRpcWebSocketClient {
         return this.sslSocketFactory;
     }
 
-    private class ExtendedWebSocketClient extends WebSocketClient {
+    private class WebSocketChannelClient extends WebSocketClient {
 
         @Nullable
         public URI getServerUri() {
@@ -146,10 +146,11 @@ public class JsonRpcWebSocketClient {
         @Nullable
         private URI serverUri;
 
-        public ExtendedWebSocketClient(URI serverUri,
+        public WebSocketChannelClient(URI serverUri,
                                        WebSocketConnectionEvents events) {
             super(serverUri/*, new Draft_17()*/);
             this.serverUri = serverUri;
+            setReuseAddr(true);//modify by jeffrey...
         }
 
         @Override
@@ -211,7 +212,8 @@ public class JsonRpcWebSocketClient {
                                 notification.setPositionalParams(((JSONRPC2Notification) msg).getPositionalParams());
                                 events.onNotification(notification);
                             } else if (msg instanceof JSONRPC2Response) {
-                                JsonRpcResponse notification = new JsonRpcResponse(message);
+                                JsonRpcResponse notification =
+                                        new JsonRpcResponse(message);
                                 events.onResponse(notification);
                             }
                         } catch (JSONRPC2ParseException e) {

@@ -31,6 +31,7 @@ public class SecurityCertificatation {
     @Nullable
     private static String clientPasswd;
 
+    private static X509Certificate certificate;
     /**
      * @return
      */
@@ -80,7 +81,6 @@ public class SecurityCertificatation {
                         new SecureRandom());
             }
             //使用双向验证
-
             return sslContext.getSocketFactory();
         } catch (KeyStoreException e) {
             e.printStackTrace();
@@ -124,6 +124,7 @@ public class SecurityCertificatation {
             sslContext.init(keyManagers,
                     new TrustManager[]{trustManager}, new SecureRandom());
             sslSocketFactory = sslContext.getSocketFactory();
+
             return sslSocketFactory;
         } catch (NoSuchAlgorithmException e) {
             throw new AssertionError(e);
@@ -362,7 +363,8 @@ public class SecurityCertificatation {
      * @param //name
      * @return
      */
-    private static X509Certificate getCertificateByAssets(InputStream certificate) {
+    public static
+        X509Certificate getCertificateByAssets(InputStream certificate) {
         if (null == certificate) return null;
         X509Certificate serverCert = null;
         try {

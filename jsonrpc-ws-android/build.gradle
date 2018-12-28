@@ -41,7 +41,8 @@ dependencies {
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 
-    implementation 'com.thetransactioncompany:jsonrpc2-base:1.38'
+    //implementation 'com.thetransactioncompany:jsonrpc2-base:1.38'
+    implementation group: 'com.thetransactioncompany', name: 'jsonrpc2-base', version: '1.38.1'
     implementation 'org.java-websocket:Java-WebSocket:1.3.6'
 
     implementation project(':utilities-android')

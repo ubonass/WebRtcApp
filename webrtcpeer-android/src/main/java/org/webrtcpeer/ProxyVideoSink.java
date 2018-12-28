@@ -1,4 +1,4 @@
-package org.webrtcapp;
+package org.webrtcpeer;
 
 import org.webrtc.Logging;
 import org.webrtc.VideoFrame;

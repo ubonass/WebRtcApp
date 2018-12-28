@@ -1,0 +1,491 @@
+package org.openvidu_demo;
+
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.util.Log;
+import okhttp3.*;
+import org.java_websocket.handshake.ServerHandshake;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import org.webrtc.IceCandidate;
+import org.webrtc.MediaConstraints;
+import org.webrtc.SessionDescription;
+import org.webrtcpeer.AppRTCClient;
+
+import javax.annotation.Nullable;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocketFactory;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.*;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
+import org.openvidu_demo.RoomParametersFetcher.RoomParametersFetcherEvents;
+
+import static org.openvidu_demo.ProtocolElements.*;
+import static org.webrtcpeer.util.AppRTCUtils.jsonPut;
+import static org.webrtcpeer.util.AppRTCUtils.jsonToValue;
+
+import org.openvidu_demo.WebSocketChannelClient.WebSocketChannelEvents;
+
+public class WebSocketRTCClient
+        implements WebSocketChannelEvents,
+        AppRTCClient, RoomParametersFetcherEvents {
+
+    private static final String TAG = "WebSocketRTCClient";
+
+    private enum ConnectionState {NEW, CONNECTED, PUBLISHED, CLOSED, ERROR}
+
+    private ConnectionState roomState;
+    @Nullable
+    private final Handler handler;
+    @Nullable
+    private OkHttpClient httpClient;
+    @Nullable
+    private SSLSocketFactory sslSocketFactory;
+    @Nullable
+    private SignalingEvents events;
+    @Nullable
+    private WebSocketChannelClient wsClient;
+    @Nullable
+    private String sessionToken;
+    @Nullable
+    private RoomConnectionParameters connectionParameters;
+    @Nullable
+    private RoomParametersFetcher fetcher;
+    @Nullable
+    private SignalingParameters signalingParameters;
+    @Nullable
+    private String userId;
+    @Nullable
+    private String remoteParticipantId;
+
+    public WebSocketRTCClient(SignalingEvents event,
+                              SSLSocketFactory sslSocketFactory) {
+        this.sslSocketFactory = sslSocketFactory;
+        this.events = event;
+        this.roomState = ConnectionState.CLOSED;
+        this.roomState = ConnectionState.CLOSED;
+        final HandlerThread handlerThread = new HandlerThread(TAG);
+        handlerThread.start();
+        this.handler = new Handler(handlerThread.getLooper());
+        this.httpClient = new OkHttpClient()
+                .newBuilder().connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(20, TimeUnit.SECONDS)
+                .writeTimeout(20, TimeUnit.SECONDS)
+                .retryOnConnectionFailure(true)
+                .sslSocketFactory(sslSocketFactory)
+                .hostnameVerifier(new HostnameVerifier() {
+                    @Override
+                    public boolean verify(String hostname, SSLSession session) {
+                        return true;
+                    }
+                }).build();
+    }
+
+    // Connects to room - function runs on a local looper thread.
+    private void connectToRoomInternal() {
+        String connectionUrl = connectionParameters.roomUrl;
+        Log.d(TAG, "Connect to room: " + connectionUrl);
+        roomState = ConnectionState.NEW;
+        fetcher =
+                new RoomParametersFetcher(httpClient,
+                        connectionUrl,
+                        null,
+                        this);
+        fetcher.createSessionAndGetToken(connectionParameters.roomId);
+    }
+
+    // Disconnect from room and send bye messages - runs on a local looper thread.
+    private void disconnectFromRoomInternal() {
+        Log.i(TAG, "Disconnect. Room state: " + roomState);
+        if (roomState ==
+                ConnectionState.CONNECTED
+                || roomState == ConnectionState.PUBLISHED) {
+            Log.i(TAG, "Closing room.");
+            //先离开房间
+            wsClient.sendMessage(LEAVEROOM_METHOD,
+                    null);
+        }
+        roomState = ConnectionState.CLOSED;
+        if (wsClient != null) {
+            wsClient.disconnect(true);
+        }
+    }
+
+    private void processIceCandidate(JSONObject jsonObject)
+            throws JSONException {
+        IceCandidate iceCandidate =
+                toJavaCandidate(jsonObject);
+        String endpointName = jsonObject.getString("endpointName");
+        if (endpointName.equals(userId))
+            events.onRemoteIceCandidate(iceCandidate, "local");
+        else
+            events.onRemoteIceCandidate(iceCandidate, endpointName);
+    }
+
+    private void processParticipantJoined(JSONObject jsonObject)
+            throws JSONException {
+        String remoteId =
+                jsonObject.getString(PARTICIPANTJOINED_USER_PARAM);
+        events.onRemoteJoinedInRoom(signalingParameters, remoteId);
+    }
+
+    private void processParticipantPublishVideo(JSONObject jsonObject)
+            throws JSONException {
+        String remoteId =
+                jsonObject.getString(PARTICIPANTJOINED_USER_PARAM);
+        events.onRemotePublishVideoInRoom(signalingParameters, remoteId);
+    }
+
+    private void processParticipantsAlreadyInRoom(JSONArray jsonArray)
+            throws JSONException {
+        int numbers = jsonArray.length();
+        Log.i(TAG, numbers + " person has in Room");
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < numbers; i++) {
+                    try {
+                        JSONObject jsonObject = jsonArray.getJSONObject(i);
+                        Log.i(TAG, "remote jsonObject:"
+                                + jsonObject.toString());
+                        String remoteId =
+                                jsonObject.getString("id");
+                        events.onRemoteJoinedInRoom(signalingParameters, remoteId);
+                        events.onRemotePublishVideoInRoom(signalingParameters,
+                                remoteId);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        },3000);
+    }
+
+    private void handleMethod(JSONObject jsonMessage) throws JSONException {
+        if (!jsonMessage.has(FILTER_PARAMS_PARAM)) return;
+        Log.i(TAG, "methodMessage:" + jsonMessage.toString());
+        final JSONObject params =
+                new JSONObject(jsonMessage.getString(FILTER_PARAMS_PARAM));
+        final String method =
+                jsonMessage.getString(FILTER_METHOD_PARAM);
+        switch (method) {
+            case PARTICIPANTJOINED_METHOD:
+                Log.i(TAG, "PARTICIPANTJOINED_METHOD");
+                processParticipantJoined(params);
+                break;
+
+            case PARTICIPANTLEFT_METHOD:
+                Log.i(TAG, "PARTICIPANTLEFT_METHOD");
+                break;
+
+            case PARTICIPANTEVICTED_METHOD:
+                Log.i(TAG, "PARTICIPANTEVICTED_METHOD");
+                break;
+
+            case PARTICIPANTPUBLISHED_METHOD:
+                Log.i(TAG, "PARTICIPANTPUBLISHED_METHOD");
+                processParticipantPublishVideo(params);
+                break;
+            case PARTICIPANTUNPUBLISHED_METHOD:
+                Log.i(TAG, "PARTICIPANTUNPUBLISHED_METHOD");
+
+                break;
+            case PARTICIPANTSENDMESSAGE_METHOD:
+                Log.i(TAG, "PARTICIPANTSENDMESSAGE_METHOD");
+                break;
+
+            case ICECANDIDATE_METHOD:
+                Log.i(TAG, "ICECANDIDATE_METHOD");
+                processIceCandidate(params);
+                break;
+
+            default:
+                Log.e(TAG, "Can't understand method: " + method);
+        }
+
+    }
+
+    private void handleResult(JSONObject jsonMessage) throws JSONException {
+        Log.i(TAG, "resultMessage:" + jsonMessage.toString());
+        JSONObject result =
+                new JSONObject(jsonMessage.getString(FILTER_PARAMS_RESULT));
+        if (result.has(PUBLISHVIDEO_SDPANSWER_PARAM)) {
+            SessionDescription sessionDescription =
+                    new SessionDescription(SessionDescription.Type.ANSWER,
+                            result.getString("sdpAnswer"));
+            if (roomState == ConnectionState.CONNECTED) {
+                roomState = ConnectionState.PUBLISHED;
+                events.onRemoteDescription(sessionDescription,
+                        "local");
+            } else if (roomState == ConnectionState.PUBLISHED) {
+                //remote...
+                events.onRemoteDescription(sessionDescription,
+                        remoteParticipantId);
+            }
+        } else {
+            if (result.has(FILTER_PARAMS_SESSIONID)
+                    && result.has(FILTER_PARAMS_VALUE)) {
+                //创建sdp并且开始发布视频到房间服务器
+                if (roomState == ConnectionState.CONNECTED) {
+                    events.onRegistedInRoom(signalingParameters,
+                            "local");
+                }
+                if (result.getJSONArray(FILTER_PARAMS_VALUE).length() > 0) {
+                    JSONArray jsonArray =
+                            result.getJSONArray(FILTER_PARAMS_VALUE);
+                    processParticipantsAlreadyInRoom(jsonArray);
+                }
+                if (this.userId == null)
+                    this.userId = result.getString("id");
+                Log.i(TAG, "userId:" + userId);
+            }
+        }
+    }
+
+
+    @Override
+    public void disconnectFromRoom() {
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                disconnectFromRoomInternal();
+                handler.getLooper().quit();
+            }
+        });
+    }
+
+    @Override
+    public void onSignalingParametersReady(
+            SignalingParameters params) {
+        this.signalingParameters = params;
+        if (signalingParameters == null) return;
+        try {
+            wsClient =
+                    new WebSocketChannelClient(
+                            new URI(signalingParameters.wssUrl), handler, this);
+            wsClient.setSSLSocketFactory(sslSocketFactory);
+            //Log.i(TAG, "response:" + params.response);
+            JSONObject jsonObject =
+                    new JSONObject(params.response);
+            sessionToken = jsonToValue(jsonObject, "token");
+            //sessionName = jsonToValue(jsonObject, "session");
+            //Log.i(TAG, "sessionToken:" + sessionToken);
+            wsClient.connectWebsocket();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    @Override
+    public void onSignalingParametersError(String description) {
+        Log.i(TAG, "onSignalingParametersError");
+    }
+
+    @Override
+    public void connectToRoom(
+            RoomConnectionParameters connectionParameters) {
+        this.connectionParameters = connectionParameters;
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                connectToRoomInternal();
+            }
+        });
+    }
+
+    /**
+     * 发送加入房间命令道服务器
+     * 加入房间成功后发送onRegistedInRoom
+     * @param connectionId
+     */
+    @Override
+    public void sendRegistedToRoom(String connectionId) {
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (roomState == ConnectionState.CONNECTED) {
+                    Map<String, Object> joinRoomParams = new HashMap<>();
+                    //joinRoomParams.put(JOINROOM_USER_PARAM, userId);
+                    joinRoomParams.put(JOINROOM_RECORDER_PARAM, "false");
+                    joinRoomParams.put(JOINROOM_SECRET_PARAM, "MY_SECRET");
+                    joinRoomParams.put(JOINROOM_ROOM_PARAM,
+                            connectionParameters.roomId);
+                    joinRoomParams.put(JOINROOM_TOKEN_PARAM, sessionToken);
+                    joinRoomParams.put(JOINROOM_PLATFORM_PARAM, "android");
+                    joinRoomParams.put(JOINROOM_METADATA_PARAM,
+                            "{\"clientData\": \"" +
+                                    connectionParameters.urlParameters + "\"}");
+                    wsClient.sendMessage(JOINROOM_METHOD, joinRoomParams);
+                }
+            }
+        });
+    }
+
+    @Override
+    public void sendOfferSdp(SessionDescription sdp,
+                             String connectionId) {
+        Log.i(TAG, "sendOfferSdp..." +
+                "connectionId:" + connectionId + " roomstate:" + roomState);
+        //publish video to Room
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (roomState == ConnectionState.CONNECTED ||
+                        roomState == ConnectionState.PUBLISHED) {
+                    Map<String, Object> offerParams = new HashMap<>();
+                    if (connectionId.equals("local")) {
+                        offerParams.put(PUBLISHVIDEO_AUDIOACTIVE_PARAM, "true");
+                        offerParams.put(PUBLISHVIDEO_VIDEOACTIVE_PARAM, "true");
+                        offerParams.put(PUBLISHVIDEO_HASAUDIO_PARAM, "true");
+                        offerParams.put(PUBLISHVIDEO_HASVIDEO_PARAM, "true");
+                        offerParams.put(PUBLISHVIDEO_DOLOOPBACK_PARAM, "false");
+                        offerParams.put(PUBLISHVIDEO_FRAMERATE_PARAM, "30");
+                        offerParams.put(PUBLISHVIDEO_TYPEOFVIDEO_PARAM, "camera");
+                        offerParams.put(PUBLISHVIDEO_VIDEODIMENSIONS_PARAM,
+                                "{\"width\":1280,\"height\":720}");
+                        offerParams.put(PUBLISHVIDEO_SDPOFFER_PARAM, sdp.description);
+                        wsClient.sendMessage(PUBLISHVIDEO_METHOD, offerParams);
+                    } else {
+                        remoteParticipantId = connectionId;
+                        offerParams.put(RECEIVEVIDEO_SDPOFFER_PARAM,
+                                sdp.description);
+                        offerParams.put(RECEIVEVIDEO_SENDER_PARAM,
+                                connectionId + "_" + "camera");
+                        wsClient.sendMessage(RECEIVEVIDEO_METHOD,
+                                offerParams);
+                    }
+
+                }
+            }
+        });
+    }
+
+    @Override
+    public void sendAnswerSdp(SessionDescription sdp,
+                              String connectionId) {
+        Log.i(TAG, "sendAnswerSdp...");
+    }
+
+    /**
+     * @param candidate
+     */
+    @Override
+    public void sendLocalIceCandidate(IceCandidate candidate,
+                                      String connectionId) {
+        Log.i(TAG, "sendLocalIceCandidate..." +
+                " connectionId:" + connectionId + " roomstate:" + roomState);
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (roomState ==
+                        ConnectionState.CONNECTED || roomState ==
+                        ConnectionState.PUBLISHED) {
+                    Map<String, Object> candidateParams = new HashMap<>();
+                    candidateParams.put(ONICECANDIDATE_SDPMIDPARAM,
+                            candidate.sdpMid);
+                    candidateParams.put(ONICECANDIDATE_SDPMLINEINDEX_PARAM,
+                            candidate.sdpMLineIndex);
+                    candidateParams.put(ONICECANDIDATE_CANDIDATE_PARAM,
+                            candidate.sdp);
+                    String endpointName = null;
+                    if (connectionId.equals("local"))
+                        endpointName = userId;
+                    else
+                        endpointName = connectionId;
+                    Log.i(TAG, "endpointName:" + endpointName);
+                    // Call initiator sends ice candidates to GAE server.
+                    candidateParams.put(ONICECANDIDATE_EPNAME_PARAM, endpointName);
+                }
+            }
+        });
+    }
+
+    @Override
+    public void sendLocalIceCandidateRemovals(IceCandidate[] candidates,
+                                              String connectionId) {
+        Log.i(TAG, "sendLocalIceCandidateRemovals..." +
+                " connectionId:" + connectionId + " roomstate:" + roomState);
+    }
+
+    @Override
+    public void onWebSocketOpen(ServerHandshake
+                                        handshakedata) {
+        if (roomState != ConnectionState.CONNECTED) {
+            roomState = ConnectionState.CONNECTED;
+            //创建peerconnection创建成功后开始加入房间
+            events.onConnectedToRoom(signalingParameters,
+                    "local");
+        }
+    }
+
+    @Override
+    public void onWebSocketMessage(String message) {
+        try {
+            JSONObject json = new JSONObject(message);
+            if (json.has(MESSAGE_TYPE_RESULT)) {
+                handleResult(json);
+            } else {
+                handleMethod(json);
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onWebSocketClose(int code, String reason,
+                                 boolean remote) {
+        events.onChannelClose();
+    }
+
+    @Override
+    public void onWebSocketError(Exception ex) {
+        reportError("WebSocket error: " + ex.getMessage());
+    }
+
+    // --------------------------------------------------------------------
+    // Helper functions.
+    private void reportError(final String errorMessage) {
+        Log.e(TAG, errorMessage);
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (roomState != ConnectionState.ERROR) {
+                    roomState = ConnectionState.ERROR;
+                    events.onChannelError(errorMessage);
+                }
+            }
+        });
+    }
+
+    //String sdpMid, int sdpMLineIndex, String sdp
+    // Converts a JSON candidate to a Java object.
+    private IceCandidate toJavaCandidate(
+            JSONObject jsonObject) throws JSONException {
+        return new IceCandidate(
+                jsonObject
+                        .getString(ICECANDIDATE_SDPMID_PARAM),
+                Integer.valueOf(
+                        jsonObject.getString(ICECANDIDATE_SDPMLINEINDEX_PARAM)),
+                jsonObject.getString(ICECANDIDATE_CANDIDATE_PARAM));
+
+    }
+
+    // Converts a Java candidate to a JSONObject.
+    private JSONObject toJsonCandidate(final IceCandidate candidate) {
+        org.json.JSONObject json = new org.json.JSONObject();
+        jsonPut(json, ICECANDIDATE_SDPMLINEINDEX_PARAM, candidate.sdpMLineIndex);
+        jsonPut(json, ICECANDIDATE_SDPMID_PARAM, candidate.sdpMid);
+        jsonPut(json, ICECANDIDATE_CANDIDATE_PARAM, candidate.sdp);
+        return json;
+    }
+}

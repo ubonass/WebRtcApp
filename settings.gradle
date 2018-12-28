@@ -1,1 +1,1 @@
-include ':app',':utilities-android', ':jsonrpc-ws-android', ':kurento-room-client', ':webrtcpeer-android', ':kurento-android'
+include ':utilities-android', ':jsonrpc-ws-android', ':webrtcpeer-android',  ':openvidu-demo', ':openvidu-android','webrtcexampleapp'
