@@ -32,7 +32,7 @@ import java.util.List;
 public class WebSocketRTCClient
         implements AppRTCClient,
         WebSocketChannelClient.WebSocketChannelEvents {
-    public static final String TURN_ADDRESS = "turn:120.78.176.218:3478?transport=udp";
+    public static final String TURN_ADDRESS = "turn:59.110.212.181:3478?transport=udp";
     public static final String TURN_USERNAME = "ubonass";
     public static final String TURN_PASSWORD = "openvidu";
     private static final String TAG = "WebSocketRTCClient";
@@ -188,7 +188,7 @@ public class WebSocketRTCClient
         });
     }
 
-    // Send Ice candidate to the other participant.
+    //Send Ice candidate to the other participant.
     @Override
     public void sendLocalIceCandidate(final IceCandidate candidate) {
         handler.post(new Runnable() {
@@ -232,6 +232,7 @@ public class WebSocketRTCClient
                                             handshakedata) {
         if (roomState == ConnectionState.NEW) {
             roomState = ConnectionState.CONNECTED;
+
             List<PeerConnection.IceServer> iceServers = new ArrayList<>();
             SignalingParameters params = new SignalingParameters(
                     iceServers,
@@ -288,6 +289,8 @@ public class WebSocketRTCClient
             Log.e(TAG,"msg:" + msg);
             switch (id) {
                 case "iceCandidate" :
+                    //msg:{"id":"iceCandidate","candidate":{"candidate":"candidate:1 1 UDP 2013266431 172.16.1.113 36239 typ host","sdpMid":"1","sdpMLineIndex":1}}
+                    Log.i(TAG,"iceCandidate:" + json.toString());
                     events.onRemoteIceCandidate(toJavaCandidate(
                             new JSONObject(json.getString("candidate"))));
                     break;

@@ -43,11 +43,8 @@ import javax.net.ssl.SSLSocketFactory;
 import org.utilities_android.SecurityCertificatation;
 import org.webrtc.*;
 import org.webrtc.RendererCommon.ScalingType;
-import org.webrtcpeer.AppRTCAudioManager;
-import org.webrtcpeer.AppRTCClient;
+import org.webrtcpeer.*;
 import org.webrtcpeer.AppRTCClient.SignalingParameters;
-import org.webrtcpeer.PeerConnectionClient;
-import org.webrtcpeer.PeerConnectionEvents;
 import org.webrtcpeer.AppRTCClient.RoomConnectionParameters;
 import org.webrtcpeer.PeerConnectionClient.PeerConnectionParameters;
 import org.webrtcpeer.PeerConnectionClient.DataChannelParameters;
@@ -701,13 +698,16 @@ public class CallActivity extends Activity
             videoCapturer = createVideoCapturer();
         }
         peerConnectionClient.createPeerConnection(
-                localProxyVideoSink, remoteProxyRenderer, videoCapturer, signalingParameters);
-
+                localProxyVideoSink,
+                remoteProxyRenderer,
+                videoCapturer,
+                signalingParameters);
         if (signalingParameters.initiator) {
             logAndToast("Creating OFFER...");
             // Create offer. Offer SDP will be sent to answering client in
             // PeerConnectionEvents.onLocalDescription event.
             peerConnectionClient.createOffer();
+
         } else {
             if (params.offerSdp != null) {
                 peerConnectionClient.setRemoteDescription(params.offerSdp);
@@ -763,7 +763,8 @@ public class CallActivity extends Activity
             @Override
             public void run() {
                 if (peerConnectionClient == null) {
-                    Log.e(TAG, "Received ICE candidate for a non-initialized peer connection.");
+                    Log.e(TAG,
+                            "Received ICE candidate for a non-initialized peer connection.");
                     return;
                 }
                 peerConnectionClient.addRemoteIceCandidate(candidate);
@@ -820,8 +821,10 @@ public class CallActivity extends Activity
                     }
                 }
                 if (peerConnectionParameters.videoMaxBitrate > 0) {
-                    Log.d(TAG, "Set video maximum bitrate: " + peerConnectionParameters.videoMaxBitrate);
-                    peerConnectionClient.setVideoMaxBitrate(peerConnectionParameters.videoMaxBitrate);
+                    Log.d(TAG, "Set video maximum bitrate: "
+                            + peerConnectionParameters.videoMaxBitrate);
+                    peerConnectionClient.setVideoMaxBitrate(
+                            peerConnectionParameters.videoMaxBitrate);
                 }
             }
         });
