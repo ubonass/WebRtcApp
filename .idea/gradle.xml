@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GradleSettings">
+    <option name="linkedExternalProjectsSettings">
+      <GradleProjectSettings>
+        <option name="distributionType" value="DEFAULT_WRAPPED" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/jsonrpc-ws-android" />
+            <option value="$PROJECT_DIR$/kurento-app" />
+            <option value="$PROJECT_DIR$/openvidu-android" />
+            <option value="$PROJECT_DIR$/openvidu-demo" />
+            <option value="$PROJECT_DIR$/utilities-android" />
+            <option value="$PROJECT_DIR$/webrtcexampleapp" />
+            <option value="$PROJECT_DIR$/webrtcpeer-android" />
+          </set>
+        </option>
+        <option name="useAutoImport" value="true" />
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="distributionType" value="WRAPPED" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/audio_device_java" />
+        <option name="gradleHome" value="$USER_HOME$/ideTools/android-studio/gradle/gradle-4.5" />
+        <option name="useAutoImport" value="true" />
+        <option name="useQualifiedModuleNames" value="true" />
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="distributionType" value="WRAPPED" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/base_java" />
+        <option name="gradleHome" value="$USER_HOME$/ideTools/android-studio/gradle/gradle-4.5" />
+        <option name="useAutoImport" value="true" />
+        <option name="useQualifiedModuleNames" value="true" />
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="distributionType" value="WRAPPED" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/jsonrpc-ws-android" />
+        <option name="gradleHome" value="$USER_HOME$/ideTools/android-studio/gradle/gradle-4.5" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/jsonrpc-ws-android" />
+          </set>
+        </option>
+        <option name="useAutoImport" value="true" />
+        <option name="useQualifiedModuleNames" value="true" />
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="distributionType" value="WRAPPED" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/libjingle_peerconnection" />
+        <option name="gradleHome" value="$USER_HOME$/ideTools/android-studio/gradle/gradle-4.5" />
+        <option name="useAutoImport" value="true" />
+        <option name="useQualifiedModuleNames" value="true" />
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="distributionType" value="WRAPPED" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$/webrtcexampleapp" />
+        <option name="gradleHome" value="$USER_HOME$/ideTools/android-studio/gradle/gradle-4.5" />
+        <option name="useAutoImport" value="true" />
+        <option name="useQualifiedModuleNames" value="true" />
+      </GradleProjectSettings>
+    </option>
+  </component>
+</project>

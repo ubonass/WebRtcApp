@@ -321,6 +321,7 @@ public class WebSocketRTCClient
             @Override
             public void run() {
                 if (connectionId.equals(userId)) {
+                    Log.i(TAG,"current client sdp :" + sdp.description);
                     openVidu.sendPublishVideo(
                             true,
                             true,
