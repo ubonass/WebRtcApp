@@ -515,7 +515,6 @@ public class CallActivity extends Activity
             return;
         }
         callStartedTimeMs = System.currentTimeMillis();
-
         // Start room connection.
         logAndToast(getString(R.string.connecting_to, roomConnectionParameters.roomUrl));
         //这里开始连接到room服务器,在WebSocketRTCClient中实现

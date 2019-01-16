@@ -86,25 +86,6 @@ public abstract class OpenVidu implements
     /**
      * Attempts to close the web socket connection asynchronously.
      */
-    public void disconnectWebSocket() {
-        try {
-            if (client != null) {
-                executor.execute(new Runnable() {
-                    public void run() {
-                        client.disconnect(false);
-                    }
-                });
-            }
-        } catch (Exception exc) {
-            Log.e(TAG, "disconnectWebSocket", exc);
-        } finally {
-            ;
-        }
-    }
-
-    /**
-     * Attempts to close the web socket connection asynchronously.
-     */
     public void disconnectWebSocket(boolean wait) {
         try {
             if (client != null) {
@@ -120,6 +101,7 @@ public abstract class OpenVidu implements
             ;
         }
     }
+
 
     /**
      * @param method

@@ -29,8 +29,6 @@ public interface AppRTCClient {
         public final String roomId;//sessionName
         public final boolean loopback;
         public final String urlParameters;
-        //public String sessionName;
-
         public RoomConnectionParameters(
                 String roomUrl,
                 String roomId,
@@ -39,17 +37,7 @@ public interface AppRTCClient {
             this.roomUrl = roomUrl;
             this.roomId = roomId;
             this.loopback = loopback;
-            this.urlParameters = urlParameters;//for participantName
-        }
-
-        public RoomConnectionParameters(String roomUrl,
-                                        String sessionName,
-                                        String participantName) {
-            this.roomUrl = roomUrl;
-            //this.sessionName = sessionName;
-            this.roomId = sessionName;
-            this.loopback = false;
-            this.urlParameters = participantName;
+            this.urlParameters = urlParameters;
         }
 
         public RoomConnectionParameters(String roomUrl, String roomId, boolean loopback) {
@@ -115,24 +103,24 @@ public interface AppRTCClient {
     class SignalingParameters {
         public final List<PeerConnection.IceServer> iceServers;
         public final boolean initiator;
-        public final String clientId;
+        public final String session;//current session,房间编号
         public final String wssUrl;
-        public final String response;//tokenResponse
+        public final String token;//tokenResponse
         public final SessionDescription offerSdp;
         public final List<IceCandidate> iceCandidates;
 
         public SignalingParameters(List<PeerConnection.IceServer> iceServers,
                                    boolean initiator,
-                                   String clientId,
+                                   String session,
                                    String wssUrl,
-                                   String response,
+                                   String token,
                                    SessionDescription offerSdp,
                                    List<IceCandidate> iceCandidates) {
             this.iceServers = iceServers;
             this.initiator = initiator;
-            this.clientId = clientId;
+            this.session = session;
             this.wssUrl = wssUrl;
-            this.response = response;//http response
+            this.token = token;//http response
             this.offerSdp = offerSdp;
             this.iceCandidates = iceCandidates;
         }
@@ -144,7 +132,6 @@ public interface AppRTCClient {
      * <p>Methods are guaranteed to be invoked on the UI thread of |activity|.
      */
     interface SignalingEvents {
-
 
         /**
          * Callback fired once the room's signaling parameters

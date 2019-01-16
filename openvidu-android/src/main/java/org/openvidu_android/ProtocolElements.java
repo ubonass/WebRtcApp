@@ -29,6 +29,11 @@ public class ProtocolElements {
 	public static final String SENDMESSAGE_ROOM_METHOD = "sendMessage";
 	public static final String SENDMESSAGE_MESSAGE_PARAM = "message";
 
+	public static final String JOINPLATFORM_METHOD = "joinPlatform";
+	public static final String JOINPLATFORM_USER_PARAM = "userId";
+	public static final String JOINPLATFORM_DEVICE_PARAM = "deviceId";
+	public static final String JOINPLATFORM_TYPE_PARAM = "type";//device,app
+
 	public static final String LEAVEROOM_METHOD = "leaveRoom";
 
 	public static final String JOINROOM_METHOD = "joinRoom";
@@ -51,6 +56,23 @@ public class ProtocolElements {
 	public static final String JOINROOM_PEERSTREAMFRAMERATE_PARAM = "frameRate";
 	public static final String JOINROOM_PEERSTREAMVIDEODIMENSIONS_PARAM = "videoDimensions";
 	public static final String JOINROOM_PEERSTREAMFILTER_PARAM = "filter";
+
+	/**
+	 * 新增邀请机制,也就是主动呼叫机制
+	 */
+	public static final String VOIPCALL_METHOD = "voipCall";
+	public static final String VOIPCALL_USER_PARAM = "user"; //same as JOINROOM_METHOD
+	public static final String VOIPCALL_USER_ID_PARAM = "userId";
+	public static final String VOIPCALL_SESSION_PARAM = "session";
+	/**
+	 * {
+	 *     numbers:10,
+	 *     targets:[{"id":"xxx"},{"id":"ffff"},{}]
+	 * }
+	 */
+	//如果number大于1则targetId为一个json数组
+	public static final String VOIPCALL_TARTET_ID_PARAM = "targetParam";//target userId
+
 
 	public static final String PUBLISHVIDEO_METHOD = "publishVideo";
 	public static final String PUBLISHVIDEO_SDPOFFER_PARAM = "sdpOffer";
@@ -108,7 +130,7 @@ public class ProtocolElements {
 	public static final String REMOVEFILTER_METHOD = "removeFilter";
 	public static final String ADDFILTEREVENTLISTENER_METHOD = "addFilterEventListener";
 	public static final String REMOVEFILTEREVENTLISTENER_METHOD = "removeFilterEventListener";
-	
+
 	public static final String FILTEREVENTDISPATCHED_METHOD = "filterEventDispatched";
 	public static final String FILTEREVENTLISTENER_CONNECTIONID_PARAM = "connectionId";
 	public static final String FILTEREVENTLISTENER_STREAMID_PARAM = "streamId";
@@ -117,6 +139,10 @@ public class ProtocolElements {
 	public static final String FILTEREVENTLISTENER_DATA_PARAM = "data";
 
 	// ---------------------------- SERVER RESPONSES & EVENTS -----------------
+	public static final String VOIPINCALL_METHOD = "voipInCall";
+	public static final String VOIPINCALL_FROM_ID_PARAM = "fromId";
+	public static final String VOIPINCALL_USER_ID_PARAM = "userId";
+	public static final String VOIPINCALL_SESSION_PARAM = "session";//房间号
 
 	public static final String PARTICIPANTJOINED_METHOD = "participantJoined";
 	public static final String PARTICIPANTJOINED_USER_PARAM = "id";

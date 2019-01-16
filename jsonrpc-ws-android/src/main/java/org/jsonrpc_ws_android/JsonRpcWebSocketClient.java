@@ -212,6 +212,7 @@ public class JsonRpcWebSocketClient {
                                 notification.setPositionalParams(((JSONRPC2Notification) msg).getPositionalParams());
                                 events.onNotification(notification);
                             } else if (msg instanceof JSONRPC2Response) {
+                                String result = msg.toJSONString();
                                 JsonRpcResponse notification =
                                         new JsonRpcResponse(message);
                                 events.onResponse(notification);

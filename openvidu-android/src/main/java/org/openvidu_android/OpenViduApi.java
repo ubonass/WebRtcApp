@@ -32,16 +32,16 @@ public class OpenViduApi extends OpenVidu {
     }
 
     /**
+     * @param secret
      * @param session
      * @param token
-     * @param metadata
-     * @param secret
-     * @param platform
      * @param recorder
+     * @param metadata
+     * @param platform
      * @param id
      */
     public void sendJoinRoom(String user,
-                             String secret,
+                            String secret,
                              String session,
                              String token,
                              boolean recorder,
@@ -49,14 +49,13 @@ public class OpenViduApi extends OpenVidu {
                              String platform,
                              int id) {
         Map<String, Object> joinRoomParams = new HashMap<>();
-        joinRoomParams.put("metadata",
+        joinRoomParams.put(JOINROOM_METADATA_PARAM,
                 "{\"clientData\": \"" + metadata + "\"}");
-        joinRoomParams.put("recorder", recorder);
-        joinRoomParams.put("user", user);
-        joinRoomParams.put("secret", secret);
-        joinRoomParams.put("session", session);
-        joinRoomParams.put("token", token);
-        joinRoomParams.put("platform", platform);
+        joinRoomParams.put(JOINROOM_RECORDER_PARAM, recorder);
+        joinRoomParams.put(JOINROOM_SECRET_PARAM, secret);
+        joinRoomParams.put(JOINROOM_ROOM_PARAM, session);
+        joinRoomParams.put(JOINROOM_TOKEN_PARAM, token);
+        joinRoomParams.put(JOINROOM_PLATFORM_PARAM, platform);
         send(JOINROOM_METHOD, joinRoomParams, id);
     }
 

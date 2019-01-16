@@ -17,12 +17,15 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.IceCandidate;
 import org.webrtc.PeerConnection;
+import org.webrtcpeer.AppRTCClient;
 import org.webrtcpeer.AppRTCClient.SignalingParameters;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.webrtcpeer.util.AppRTCUtils.jsonToValue;
 
 /**
  * AsyncTask that converts an AppRTC room URL into the set of signaling
@@ -38,6 +41,7 @@ public class RoomParametersFetcher {
     private static final int TURN_HTTP_TIMEOUT_MS = 5000;
     private final RoomParametersFetcherEvents events;
     private final String roomUrl;
+    private final String urlParameters;
     private final String roomMessage;
     @Nullable
     private OkHttpClient client;
@@ -168,7 +172,9 @@ public class RoomParametersFetcher {
         try {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("session", sessionId);
-            //Log.i(TAG, "jsonObject:" + jsonObject.toString());
+            jsonObject.put("role", "MODERATOR");
+            jsonObject.put("data", "Jeffrey");
+            Log.i(TAG, "request:" + jsonObject.toString());
             RequestBody body =
                     RequestBody.create(
                             MediaType.parse("application/json; charset=utf-8"),
@@ -182,12 +188,30 @@ public class RoomParametersFetcher {
             Response response = null;
             response = client.newCall(request).execute();
             String responseString = response.body().string();
-            String wsUrl = getConnectionUrl();
-            List<PeerConnection.IceServer> iceServers = new ArrayList<>();
+            Log.i(TAG,"responseString:" + responseString);
+            jsonObject = new JSONObject(responseString);
+            String wssUrl = jsonObject.getString("wssUrl");
+            String token = jsonObject.getString("token");
+            String session = jsonObject.getString("session");
+            List<PeerConnection.IceServer> iceServers =
+                    iceServersFromPCConfigJSON(jsonObject.get("pcOptions").toString());
+
+            /*List<PeerConnection.IceServer> iceServers = new ArrayList<>();
             iceServers.add(new PeerConnection.IceServer(
-                    TURN_ADDRESS, TURN_USERNAME, TURN_PASSWORD));
-            iceServers.add(new PeerConnection.IceServer(
-                    "turn:54.169.146.98:3478", "kurento", "kurento"));
+                    TURN_ADDRESS, TURN_USERNAME, TURN_PASSWORD));*/
+            //iceServers.add(new PeerConnection.IceServer(
+            //        "turn:54.169.146.98:3478", "kurento", "kurento"));
+
+            /*iceServers.add(new PeerConnection.IceServer("stun:stun.ekiga.net"));
+            iceServers.add(new PeerConnection.IceServer("stun:stun.ideasip.com"));
+            iceServers.add(new PeerConnection.IceServer("stun:stun.schlund.de"));
+            iceServers.add(new PeerConnection.IceServer("stun:stun.stunprotocol.org:3478"));
+            iceServers.add(new PeerConnection.IceServer("stun:stun.voiparound.com"));
+            iceServers.add(new PeerConnection.IceServer("stun:stun.voipbuster.com"));
+            iceServers.add(new PeerConnection.IceServer("stun:stun.voipstunt.com"));
+            iceServers.add(new PeerConnection.IceServer("stun:stun.voxgratia.org"));
+            iceServers.add(new PeerConnection.IceServer("stun:stun.services.mozilla.com"));*/
+
             //IceCandidate iceCandidate = new IceCandidate();
             //iceServers.add(new PeerConnection.IceServer("stun:stun.59.110.212.181:3478"));
            /* iceServers.add(new PeerConnection.IceServer("stun:121.42.142.56:3478"));
@@ -212,8 +236,8 @@ public class RoomParametersFetcher {
             iceServers.add(new PeerConnection.IceServer("stun:stun.internetcalls.com:3478"));
             iceServers.add(new PeerConnection.IceServer("stun:stun.voip.aebc.com:3478"));*/
             SignalingParameters params = new SignalingParameters(
-                    iceServers, true, null, wsUrl,
-                    responseString, null, null);
+                    iceServers, true, session, wssUrl,
+                    token, null, null);
             events.onSignalingParametersReady(params);//sendOffdp
         } catch (JSONException e) {
             e.printStackTrace();
@@ -222,45 +246,38 @@ public class RoomParametersFetcher {
         }
     }
 
-    private SignalingParameters getSignalingParameters() {
-        String wsUrl = getConnectionUrl();
-        List<PeerConnection.IceServer> iceServers = new ArrayList<>();
-        iceServers.add(new PeerConnection.IceServer(
-                TURN_ADDRESS, TURN_USERNAME, TURN_PASSWORD));
-        iceServers.add(new PeerConnection.IceServer("stun:121.42.142.56:3478"));
-        /*iceServers.add(new PeerConnection.IceServer("stun:stun.l.google.com:19302"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.xten.com:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.voipbuster.com:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.voxgratia.org:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.sipgate.net:10000"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.ekiga.net:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.ideasip.com:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.schlund.de:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.voiparound.com:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.voipbuster.com:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.voipstunt.com:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:numb.viagenie.ca:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.counterpath.com:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.1und1.de:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.gmx.net:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.bcs2005.net:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.callwithus.com:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.counterpath.net:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.internetcalls.com:3478"));
-        iceServers.add(new PeerConnection.IceServer("stun:stun.voip.aebc.com:3478"));*/
-        SignalingParameters params = new SignalingParameters(
-                iceServers, true, null, wsUrl,
-                null, null, null);
-        return params;
-    }
-
     public RoomParametersFetcher(OkHttpClient client,
-                                 String roomUrl, String roomMessage,
+                                 AppRTCClient.RoomConnectionParameters roomConnectionParameters,
+                                 String roomMessage,
                                  final RoomParametersFetcherEvents events) {
-        this.roomUrl = roomUrl;
+        this.roomUrl = roomConnectionParameters.roomUrl;
+        this.urlParameters = roomConnectionParameters.urlParameters;
         this.roomMessage = roomMessage;
         this.events = events;
         this.client = client;
+    }
+
+    // Return the list of ICE servers described by a WebRTCPeerConnection
+    // configuration string.
+    private List<PeerConnection.IceServer> iceServersFromPCConfigJSON(String pcConfig)
+            throws JSONException {
+        JSONObject json = new JSONObject(pcConfig);
+        JSONArray servers = json.getJSONArray("iceServers");
+        List<PeerConnection.IceServer> ret = new ArrayList<>();
+        for (int i = 0; i < servers.length(); ++i) {
+            JSONObject server = servers.getJSONObject(i);
+            String url = server.getString("url");
+            String username = server.getString("username");
+            String credential = server.getString("credential");
+            //String credential = server.has("credential") ? server.getString("credential") : "";
+            PeerConnection.IceServer turnServer =
+                    PeerConnection.IceServer.builder(url)
+                            .setUsername(username)
+                            .setPassword(credential)
+                            .createIceServer();
+            ret.add(turnServer);
+        }
+        return ret;
     }
 
 

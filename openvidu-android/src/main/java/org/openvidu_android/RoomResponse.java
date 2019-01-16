@@ -18,6 +18,7 @@
 package org.openvidu_android;
 
 import android.support.annotation.Nullable;
+import android.util.Log;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 
@@ -144,6 +145,12 @@ public class RoomResponse {
 
     private List<HashMap<String, String>>
         getJSONObjectValues(JSONObject obj) {
+        if (obj.containsKey("value") &&
+                obj.get("value").equals("pong"))
+            return null;
+        if (obj.containsKey("value") &&
+                obj.get("value").equals("joinPlatform"))
+            return null;
         List<HashMap<String, String>> result = new Vector<>();
         // Try to find value field. Value is specific to room join response
         // and contains a list of all existing users

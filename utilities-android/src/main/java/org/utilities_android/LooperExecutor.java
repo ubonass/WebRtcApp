@@ -98,7 +98,6 @@ public class LooperExecutor extends Thread implements Executor {
                     "Running looper executor without calling requestStart()");
             return;
         }
-
         handler.postDelayed(runnable,delay);
     }
 }

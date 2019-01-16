@@ -101,13 +101,13 @@ public class WebSocketRTCClient
     }
     // Connects to room - function runs on a local looper thread.
     private void connectToRoomInternal() {
-        String connectionUrl =
-                connectionParameters.roomUrl;
-        Log.d(TAG, "Connect to room: " + connectionUrl);
+        //String connectionUrl =
+        //        connectionParameters.roomUrl;
+        //Log.d(TAG, "Connect to room: " + connectionUrl);
         roomState = ConnectionState.NEW;
         fetcher =
                 new RoomParametersFetcher(httpClient,
-                        connectionUrl,
+                        connectionParameters,
                         null,
                         this);
         fetcher.createSessionAndGetToken(connectionParameters.roomId);
@@ -116,13 +116,15 @@ public class WebSocketRTCClient
     // Disconnect from room and send bye messages - runs on a local looper thread.
     private void disconnectFromRoomInternal() {
         Log.d(TAG, "Disconnect. Room state: " + roomState);
-        if (roomState == ConnectionState.CONNECTED) {
+        if (roomState ==
+                ConnectionState.PUBLISHED ||
+                roomState == ConnectionState.CONNECTED) {
             Log.d(TAG, "Closing room.");
             openVidu.sendLeaveRoom(++msgRequestId);
         }
         roomState = ConnectionState.CLOSED;
         if (openVidu != null) {
-            openVidu.disconnectWebSocket();
+            openVidu.disconnectWebSocket(true);
             openVidu = null;
         }
     }
@@ -272,6 +274,7 @@ public class WebSocketRTCClient
      */
     @Override
     public void onRoomConnected() {
+        Log.i(TAG,"onRoomConnected......");
         if (roomState != ConnectionState.CONNECTED) {
             roomState = ConnectionState.CONNECTED;
             //加入房间
@@ -381,21 +384,12 @@ public class WebSocketRTCClient
     public void onSignalingParametersReady(SignalingParameters params) {
         this.signalingParameters = params;
         if (signalingParameters == null) return;
+        sessionToken = signalingParameters.token;
         openVidu = new OpenViduApi(executor,
                 signalingParameters.wssUrl,
                 sslSocketFactory,
                 this);
-        try {
-            Log.i(TAG, "response:" + params.response);
-            JSONObject jsonObject =
-                    new JSONObject(params.response);
-            sessionToken = jsonToValue(jsonObject, "token");
-            //sessionName = jsonToValue(jsonObject, "session");
-            Log.i(TAG, "sessionToken:" + sessionToken);
-            openVidu.connectWebSocket();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+        openVidu.connectWebSocket();
     }
 
     @Override

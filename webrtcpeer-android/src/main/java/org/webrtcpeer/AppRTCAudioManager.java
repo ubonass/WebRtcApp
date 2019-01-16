@@ -16,12 +16,17 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.AssetFileDescriptor;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
+import android.media.MediaPlayer;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Build;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -116,6 +121,9 @@ public class AppRTCAudioManager {
     // Callback method for changes in audio focus.
     @Nullable
     private AudioManager.OnAudioFocusChangeListener audioFocusChangeListener;
+
+    @Nullable
+    private MediaPlayer mediaPlayer;
 
     /**
      * This method is called when the proximity sensor reports a state change,
@@ -621,4 +629,55 @@ public class AppRTCAudioManager {
         }
         Log.d(TAG, "--- updateAudioDeviceState done");
     }
+
+    public void playSystemMedia(int position) {
+        if (audioManager == null) return;
+        RingtoneManager ringtoneManager =
+                new RingtoneManager(apprtcContext);
+        ringtoneManager.setType(RingtoneManager.TYPE_ALARM);
+        ringtoneManager.getCursor();
+        Uri ringUri = ringtoneManager.getRingtoneUri(position);
+        audioManager.setStreamVolume(AudioManager.STREAM_ALARM,
+                7, AudioManager.ADJUST_SAME);
+        if (mediaPlayer == null)
+            mediaPlayer = new MediaPlayer();
+        mediaPlayer.reset();
+        try {
+            mediaPlayer.setDataSource(apprtcContext, ringUri);
+            mediaPlayer.setAudioStreamType(AudioManager.STREAM_RING);
+            mediaPlayer.prepare();
+            mediaPlayer.start();
+            mediaPlayer.setLooping(true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void playAssetsMedia(String name) {
+        if (audioManager == null) return;
+        if (mediaPlayer == null)
+            mediaPlayer = new MediaPlayer();
+        mediaPlayer.reset();
+        try {
+            AssetFileDescriptor fileDescriptor =
+                    apprtcContext.getAssets().openFd(name);
+            mediaPlayer.setDataSource(fileDescriptor.getFileDescriptor(),fileDescriptor.getStartOffset(),
+                    fileDescriptor.getStartOffset());
+            mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            mediaPlayer.prepare();
+            mediaPlayer.start();
+            mediaPlayer.setLooping(true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void stopMeida() {
+        if (mediaPlayer != null
+                && mediaPlayer.isPlaying()){
+            mediaPlayer.stop();
+            mediaPlayer = null;
+        }
+    }
+
 }

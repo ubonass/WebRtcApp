@@ -29,7 +29,6 @@ import org.webrtc.audio.JavaAudioDeviceModule.AudioTrackErrorCallback;
 import org.webrtcpeer.AppRTCClient.SignalingParameters;
 
 public class PeerConnectionClient {
-
     private static final String TAG = "PCRTCClient";
     private static final int HD_VIDEO_WIDTH = 1280;
     private static final int HD_VIDEO_HEIGHT = 720;

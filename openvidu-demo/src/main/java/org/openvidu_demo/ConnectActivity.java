@@ -269,7 +269,8 @@ public class ConnectActivity extends Activity {
              //       getString(R.string.pref_room_default));
         }
 
-        String participantName = Integer.toString((new Random()).nextInt(100));
+        String urlParameters =
+                "openvidudemo-" + Integer.toString((new Random()).nextInt(100));
 
         String roomUrl = sharedPref.getString(
                 keyprefRoomServerUrl,
@@ -460,7 +461,7 @@ public class ConnectActivity extends Activity {
             Intent intent = new Intent(this, CallActivity.class);
             intent.setData(uri);
             intent.putExtra(ExtraInfo.EXTRA_ROOMID, roomId);
-            intent.putExtra(ExtraInfo.EXTRA_URLPARAMETERS, participantName);
+            intent.putExtra(ExtraInfo.EXTRA_URLPARAMETERS, urlParameters);
             intent.putExtra(ExtraInfo.EXTRA_LOOPBACK, loopback);
             intent.putExtra(ExtraInfo.EXTRA_VIDEO_CALL, videoCallEnabled);
             intent.putExtra(ExtraInfo.EXTRA_SCREENCAPTURE, useScreencapture);
